@@ -14,11 +14,21 @@ Tested and working on Linux, OSX and Cygwin.
 
 #### Continuous saving
 
-Tmux environment will be saved at an interval of 15 minutes. All the saving
+Tmux environment will be saved every 15 minutes by default. All the saving
 happens in the background without impact to your workflow.
 
 This action starts automatically when the plugin is installed. Note it requires
 the status line to be `on` to run (since it uses a hook in status-right to run).
+
+No extra configuration is required for the default interval.
+
+To change the save interval, put this in `.tmux.conf`:
+
+    set -g @continuum-save-interval '30'
+
+To disable continuous saving:
+
+    set -g @continuum-save-interval '0'
 
 #### Automatic tmux start
 

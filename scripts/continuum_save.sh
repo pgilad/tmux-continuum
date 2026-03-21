@@ -10,17 +10,13 @@ supported_tmux_version_ok() {
 	"$CURRENT_DIR/check_tmux_version.sh" "$SUPPORTED_VERSION"
 }
 
-get_interval() {
-	get_tmux_option "$auto_save_interval_option" "$auto_save_interval_default"
-}
-
 auto_save_not_disabled() {
-	[ "$(get_interval)" -gt 0 ]
+	[ "$(get_auto_save_interval)" -gt 0 ]
 }
 
 enough_time_since_last_run_passed() {
 	local last_saved_timestamp="$(get_tmux_option "$last_auto_save_option" "0")"
-	local interval_minutes="$(get_interval)"
+	local interval_minutes="$(get_auto_save_interval)"
 	local interval_seconds="$((interval_minutes * 60))"
 	local next_run="$((last_saved_timestamp + $interval_seconds))"
 	[ "$(current_timestamp)" -ge "$next_run" ]

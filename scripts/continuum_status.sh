@@ -4,12 +4,14 @@ CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 source "$CURRENT_DIR/helpers.sh"
 source "$CURRENT_DIR/variables.sh"
+source "$CURRENT_DIR/shared.sh"
 
 print_status() {
-	local save_int="$(get_tmux_option "$auto_save_interval_option")"
+	local save_int
+	save_int="$(get_auto_save_interval)"
 	local status=""
 	local style_wrap
-	if [ $save_int -gt 0 ]; then
+	if [ "$save_int" -gt 0 ]; then
 		style_wrap="$(get_tmux_option "$status_on_style_wrap_option" "")"
 		status="$save_int"
 	else
