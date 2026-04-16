@@ -8,5 +8,8 @@ sleep 1
 
 restore_script="$(tmux show-option -gqv @_continuum_restore_script 2>/dev/null)"
 if [[ -n "$restore_script" && -x "$restore_script" ]]; then
-    "$restore_script"
+    # Resurrect reports restore-specific failures; keep tmux from showing a generic run-shell error.
+    "$restore_script" || true
 fi
+
+exit 0
