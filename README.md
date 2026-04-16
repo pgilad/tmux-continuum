@@ -185,3 +185,8 @@ Bug reports and contributions are welcome. See
 ## License
 
 [MIT](LICENSE.md)
+
+## Credits
+
+Based on the original
+[tmux-plugins/tmux-continuum](https://github.com/tmux-plugins/tmux-continuum).
