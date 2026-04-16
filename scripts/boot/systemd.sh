@@ -11,9 +11,9 @@ generate_unit() {
 Description=tmux default session (detached)
 
 [Service]
-Type=forking
+Type=oneshot
+RemainAfterExit=yes
 ExecStart=${tmux_path} new-session -d
-ExecStop=${tmux_path} kill-server
 
 [Install]
 WantedBy=default.target

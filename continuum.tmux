@@ -2,17 +2,12 @@
 
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS="$CURRENT_DIR/scripts"
+RESTORE_FRESH_MAX_AGE_SECONDS=30
 
 # --- Inline helpers ---
 
 get_option()  { tmux show-option -gqv "$1"; }
 set_option()  { tmux set-option -gq "$1" "$2"; }
-
-get_interval() {
-    local val
-    val="$(get_option "@continuum-save-interval")"
-    if [[ "$val" =~ ^[0-9]+$ ]]; then echo "$val"; else echo 15; fi
-}
 
 # --- Resurrect path resolution ---
 
@@ -50,10 +45,6 @@ validate_resurrect() {
 # --- Save daemon lifecycle ---
 
 start_save_daemon() {
-    local interval
-    interval="$(get_interval)"
-    [[ "$interval" -eq 0 ]] && return 0
-
     local old_pid
     old_pid="$(get_option "@_continuum_pid")"
     if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
@@ -66,6 +57,34 @@ start_save_daemon() {
 
 # --- Auto-restore ---
 
+count_tmux_items() {
+    tmux "$@" 2>/dev/null | awk 'END { print NR + 0 }'
+}
+
+recent_server_start() {
+    local start_time now
+    start_time="$(tmux display-message -p -F '#{start_time}' 2>/dev/null)"
+    [[ "$start_time" =~ ^[0-9]+$ ]] || return 1
+
+    now="$(date +%s)"
+    [[ "$now" =~ ^[0-9]+$ ]] || return 1
+
+    (( now >= start_time && now - start_time <= RESTORE_FRESH_MAX_AGE_SECONDS ))
+}
+
+default_server_shape() {
+    local sessions windows panes
+    sessions="$(count_tmux_items list-sessions -F '#{session_id}')"
+    windows="$(count_tmux_items list-windows -a -F '#{window_id}')"
+    panes="$(count_tmux_items list-panes -a -F '#{pane_id}')"
+
+    [[ "$sessions" -eq 1 && "$windows" -eq 1 && "$panes" -eq 1 ]]
+}
+
+fresh_server_for_restore() {
+    recent_server_start && default_server_shape
+}
+
 maybe_restore() {
     local already
     already="$(get_option "@_continuum_restored")"
@@ -73,7 +92,9 @@ maybe_restore() {
 
     local enabled
     enabled="$(get_option "@continuum-restore")"
-    [[ "$enabled" == "on" ]] && tmux run-shell -b "$SCRIPTS/restore.sh"
+    if [[ "$enabled" == "on" ]] && fresh_server_for_restore; then
+        tmux run-shell -b "$SCRIPTS/restore.sh"
+    fi
 
     # Set flag regardless — we've made the restore decision for this server lifetime
     set_option "@_continuum_restored" 1
