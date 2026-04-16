@@ -1,87 +1,115 @@
 #!/usr/bin/env bash
 
-CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS="$CURRENT_DIR/scripts"
 
-source "$CURRENT_DIR/scripts/helpers.sh"
-source "$CURRENT_DIR/scripts/variables.sh"
-source "$CURRENT_DIR/scripts/shared.sh"
+# --- Inline helpers ---
 
-save_command_interpolation="#($CURRENT_DIR/scripts/continuum_save.sh)"
+get_option()  { tmux show-option -gqv "$1"; }
+set_option()  { tmux set-option -gq "$1" "$2"; }
 
-supported_tmux_version_ok() {
-	"$CURRENT_DIR/scripts/check_tmux_version.sh" "$SUPPORTED_VERSION"
+get_interval() {
+    local val
+    val="$(get_option "@continuum-save-interval")"
+    if [[ "$val" =~ ^[0-9]+$ ]]; then echo "$val"; else echo 15; fi
 }
 
-handle_tmux_automatic_start() {
-	"$CURRENT_DIR/scripts/handle_tmux_automatic_start.sh"
+# --- Resurrect path resolution ---
+
+resolve_resurrect_script() {
+    local option="$1" fallback="$2"
+    local path
+    path="$(get_option "$option")"
+    if [[ -z "$path" ]]; then
+        # Standard tpm sibling layout
+        local candidate="$CURRENT_DIR/../tmux-resurrect/scripts/$fallback"
+        [[ -f "$candidate" ]] && path="$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")"
+    fi
+    if [[ -z "$path" ]]; then
+        # tpm-rs namespaced layout
+        local candidate="$CURRENT_DIR/../tmux-plugins/tmux-resurrect/scripts/$fallback"
+        [[ -f "$candidate" ]] && path="$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")"
+    fi
+    echo "$path"
 }
 
-another_tmux_server_running() {
-	if just_started_tmux_server; then
-		another_tmux_server_running_on_startup
-	else
-		# script loaded after tmux server start can have multiple clients attached
-		[ "$(number_tmux_processes_except_current_server)" -gt "$(number_current_server_client_processes)" ]
-	fi
+validate_resurrect() {
+    local save_script restore_script
+    save_script="$(resolve_resurrect_script "@resurrect-save-script-path" "save.sh")"
+    restore_script="$(resolve_resurrect_script "@resurrect-restore-script-path" "restore.sh")"
+
+    if [[ -z "$save_script" || -z "$restore_script" ]]; then
+        tmux display-message "continuum: ERROR - tmux-resurrect not found. Install it and reload."
+        return 1
+    fi
+
+    set_option "@_continuum_save_script" "$save_script"
+    set_option "@_continuum_restore_script" "$restore_script"
 }
 
-delay_saving_environment_on_first_plugin_load() {
-	if [ -z "$(get_tmux_option "$last_auto_save_option" "")" ]; then
-		# last save option not set, this is first time plugin load
-		set_last_save_timestamp
-	fi
+# --- Save daemon lifecycle ---
+
+start_save_daemon() {
+    local interval
+    interval="$(get_interval)"
+    [[ "$interval" -eq 0 ]] && return 0
+
+    local old_pid
+    old_pid="$(get_option "@_continuum_pid")"
+    if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+        kill "$old_pid" 2>/dev/null || true
+        sleep 0.2
+    fi
+
+    tmux run-shell -b "$SCRIPTS/save_daemon.sh"
 }
 
-add_resurrect_save_interpolation() {
-	local status_right_value="$(get_tmux_option "status-right" "")"
-	# check interpolation not already added
-	if ! [[ "$status_right_value" == *"$save_command_interpolation"* ]]; then
-		local new_value="${save_command_interpolation}${status_right_value}"
-		set_tmux_option "status-right" "$new_value"
-	fi
+# --- Auto-restore ---
+
+maybe_restore() {
+    local already
+    already="$(get_option "@_continuum_restored")"
+    [[ -n "$already" ]] && return 0
+
+    local enabled
+    enabled="$(get_option "@continuum-restore")"
+    [[ "$enabled" == "on" ]] && tmux run-shell -b "$SCRIPTS/restore.sh"
+
+    # Set flag regardless — we've made the restore decision for this server lifetime
+    set_option "@_continuum_restored" 1
 }
 
-just_started_tmux_server() {
-	local tmux_start_time
-	tmux_start_time="$(tmux display-message -p -F '#{start_time}')"
-	local restore_max_delay
-	restore_max_delay="$(get_tmux_option "$auto_restore_max_delay_option" "${auto_restore_max_delay_default}")"
-	[ "$tmux_start_time" == "" ] || [ "$tmux_start_time" -gt "$(($(date +%s)-${restore_max_delay}))" ]
+# --- Boot command aliases ---
+
+register_boot_commands() {
+    # shellcheck disable=SC2102  # [N] is tmux array index syntax, not a char range
+    tmux set-option -s command-alias[200] \
+        continuum-boot-enable="run-shell -b '$SCRIPTS/boot/setup.sh enable'"
+    # shellcheck disable=SC2102
+    tmux set-option -s command-alias[201] \
+        continuum-boot-disable="run-shell -b '$SCRIPTS/boot/setup.sh disable'"
 }
 
-start_auto_restore_in_background() {
-	"$CURRENT_DIR/scripts/continuum_restore.sh" &
+# --- Status interpolation ---
+
+update_status_interpolation() {
+    local option="$1"
+    local value
+    value="$(get_option "$option")"
+    if [[ "$value" == *'#{continuum_status}'* ]]; then
+        local replacement="#($SCRIPTS/status.sh)"
+        set_option "$option" "${value//'#{continuum_status}'/$replacement}"
+    fi
 }
 
-update_tmux_option() {
-	local option="$1"
-	local option_value="$(get_tmux_option "$option")"
-	# replace interpolation string with a script to execute
-	local new_option_value="${option_value/$status_interpolation_string/$status_script}"
-	set_tmux_option "$option" "$new_option_value"
-}
+# --- Main ---
 
 main() {
-	if supported_tmux_version_ok; then
-		handle_tmux_automatic_start
-
-		# Advanced edge case handling: start auto-saving only if this is the
-		# only tmux server. We don't want saved files from more environments to
-		# overwrite each other.
-		if ! another_tmux_server_running; then
-			# give user a chance to restore previously saved session
-			delay_saving_environment_on_first_plugin_load
-			add_resurrect_save_interpolation
-		fi
-
-		if just_started_tmux_server; then
-			start_auto_restore_in_background
-		fi
-
-		# Put "#{continuum_status}" interpolation in status-right or
-		# status-left tmux option to get current tmux continuum status.
-		update_tmux_option "status-right"
-		update_tmux_option "status-left"
-	fi
+    validate_resurrect || return
+    start_save_daemon
+    maybe_restore
+    register_boot_commands
+    update_status_interpolation "status-right"
+    update_status_interpolation "status-left"
 }
 main

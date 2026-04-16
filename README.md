@@ -1,113 +1,187 @@
 # tmux-continuum
 
-Features:
+Continuous saving and automatic restoring for [tmux](https://github.com/tmux/tmux).
 
-- continuous saving of tmux environment
-- automatic tmux start when computer/server is turned on
-- automatic restore when tmux is started
+- **Auto-save** — periodically saves your tmux environment in the background
+- **Auto-restore** — restores the last saved environment when tmux starts
+- **Auto-start** — optionally starts tmux on boot (macOS / Linux)
 
-Together, these features enable uninterrupted tmux usage. No matter the computer
-or server restarts, if the machine is on, tmux will be there how you left it off
-the last time it was used.
+No matter the crash or restart, tmux will be there how you left it.
 
-Tested and working on Linux, OSX and Cygwin.
+Works on Linux and macOS. Requires **tmux 3.2+** and **bash**.
 
-#### Continuous saving
+## How it works
 
-Tmux environment will be saved every 15 minutes by default. All the saving
-happens in the background without impact to your workflow.
+Continuum runs a single background daemon (via `tmux run-shell -b`) that
+sleeps for the configured interval and then calls
+[tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect)'s save
+script. No status-line hacks, no locks, no periodic forks.
 
-This action starts automatically when the plugin is installed. Note it requires
-the status line to be `on` to run (since it uses a hook in status-right to run).
+On a fresh server start, continuum optionally triggers resurrect's restore
+script exactly once, guarded by a server-scoped flag — re-sourcing your
+config will never re-trigger a restore.
 
-No extra configuration is required for the default interval.
+## Requirements
 
-To change the save interval, put this in `.tmux.conf`:
+- `tmux 3.2` or higher
+- `bash`
+- [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect)
 
-    set -g @continuum-save-interval '30'
+**tmux-resurrect must load before tmux-continuum.** List it first in your
+plugin manager config.
 
-To disable continuous saving:
+## Installation
 
-    set -g @continuum-save-interval '0'
+### With [tpm-rs](https://github.com/pgilad/tpm-rs) (recommended)
 
-#### Automatic tmux start
+[tpm-rs](https://github.com/pgilad/tpm-rs) is a modern, fast tmux plugin
+manager written in Rust. Add to your `tpm.yaml`:
 
-Tmux is automatically started after the computer/server is turned on.
+```yaml
+plugins:
+  - name: tmux-plugins/tmux-resurrect
+  - name: tmux-plugins/tmux-continuum
+```
 
-See the [instructions](docs/automatic_start.md) on how to enable this for your
-system.
+Run `tpm install` and reload your config. Auto-save starts immediately.
 
-#### Automatic restore
+### With [TPM](https://github.com/tmux-plugins/tpm) (legacy)
 
-Last saved environment is automatically restored when tmux is started.
+Add to `.tmux.conf`:
 
-Put `set -g @continuum-restore 'on'` in `.tmux.conf` to enable this.
+```tmux
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+```
 
-Note: automatic restore happens **exclusively** on tmux server start. No other
-action (e.g. sourcing `.tmux.conf`) triggers this.
+Press `prefix + I` to install. The plugin starts working in the background
+automatically.
 
-#### Dependencies
+### Manual
 
-`tmux 1.9` or higher, `bash`,
-[tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) plugin.
+```sh
+git clone https://github.com/tmux-plugins/tmux-continuum ~/path/to/continuum
+```
 
-### Installation with [Tmux Plugin Manager](https://github.com/tmux-plugins/tpm) (recommended)
+Add to `.tmux.conf`:
 
-Please make sure you have
-[tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) installed.
+```tmux
+run-shell ~/path/to/continuum/continuum.tmux
+```
 
-Add plugin to the list of TPM plugins in `.tmux.conf`:
+Reload: `tmux source-file ~/.tmux.conf`
 
-    set -g @plugin 'tmux-plugins/tmux-resurrect'
-    set -g @plugin 'tmux-plugins/tmux-continuum'
+## Configuration
 
-Hit `prefix + I` to fetch the plugin and source it. The plugin will
-automatically start "working" in the background, no action required.
+| Option | Default | Description |
+|---|---|---|
+| `@continuum-save-interval` | `15` | Auto-save interval in minutes. `0` to pause. |
+| `@continuum-restore` | `off` | Set to `on` to restore on fresh server start. |
 
-### Manual Installation
+### Auto-save
 
-Please make sure you have
-[tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) installed.
+Saves run every 15 minutes by default. Change the interval:
 
-Clone the repo:
+```tmux
+set -g @continuum-save-interval '30'
+```
 
-    $ git clone https://github.com/tmux-plugins/tmux-continuum ~/clone/path
+Disable (pause) saving:
 
-Add this line to the bottom of `.tmux.conf`:
+```tmux
+set -g @continuum-save-interval '0'
+```
 
-    run-shell ~/clone/path/continuum.tmux
+Setting the interval to `0` pauses the daemon — it checks back every 60
+seconds. Change the interval back to re-enable without re-sourcing your config.
 
-Reload TMUX environment with: `$ tmux source-file ~/.tmux.conf`
+### Auto-restore
 
-The plugin will automatically start "working" in the background, no action
-required.
+```tmux
+set -g @continuum-restore 'on'
+```
 
-### Docs
+Restore runs **once** per server lifetime, on the first plugin load after server
+start. Re-sourcing `.tmux.conf` will not trigger it again.
 
-- [frequently asked questions](docs/faq.md)
-- [behavior when running multiple tmux servers](docs/multiple_tmux_servers.md) -
-  this doc is safe to skip, but you might want to read it if you're using tmux
-  with `-L` or `-S` flags
-- [automatically start tmux after the computer is turned on](docs/automatic_start.md)
-- [continuum status in tmux status line](docs/continuum_status.md)
+To suppress restore without changing your config, create a halt file:
 
-### Other goodies
+```sh
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tmux"
+touch "${XDG_CONFIG_HOME:-$HOME/.config}/tmux/no-auto-restore"
+```
 
-- [tmux-copycat](https://github.com/tmux-plugins/tmux-copycat) - a plugin for
-  regex searches in tmux and fast match selection
-- [tmux-yank](https://github.com/tmux-plugins/tmux-yank) - enables copying
-  highlighted text to system clipboard
-- [tmux-open](https://github.com/tmux-plugins/tmux-open) - a plugin for quickly
-  opening highlighted file or a url
+Override the halt file path with the `TMUX_CONTINUUM_NO_RESTORE` env var.
 
-### Known Issues
+### Auto-start on boot
 
-- In order to be executed periodically, the plugin updates the `status-right` tmux variable. In case some plugin (usually themes) overwrites the `status-right` variable, the autosave feature stops working. To fix this issue, place the plugin last in the TPM plugins list. 
+Start a headless tmux server on login. From inside tmux:
 
-### Reporting bugs and contributing
+```
+:continuum-boot-enable
+```
 
-Both contributing and bug reports are welcome. Please check out
-[contributing guidelines](CONTRIBUTING.md).
+This installs a **macOS LaunchAgent** or **Linux systemd user unit** that runs
+`tmux new-session -d`. The service is standalone — it does not reference the
+plugin directory and keeps working even if the plugin is removed.
 
-### License
+To attach automatically when you open a terminal, add to your shell rc:
+
+```sh
+[[ -z "$TMUX" ]] && tmux attach 2>/dev/null
+```
+
+To remove:
+
+```
+:continuum-boot-disable
+```
+
+See [docs/automatic_start.md](docs/automatic_start.md) for details.
+
+### Status line
+
+Add `#{continuum_status}` to `status-right` or `status-left`:
+
+```tmux
+set -g status-right 'Continuum: #{continuum_status}'
+```
+
+Shows:
+- `3m ago` — time since last save
+- `15m` — configured interval (before first save completes)
+- `off` — saving is paused
+
+See [docs/continuum_status.md](docs/continuum_status.md).
+
+## Docs
+
+- [FAQ](docs/faq.md)
+- [Auto-start on boot](docs/automatic_start.md)
+- [Status line interpolation](docs/continuum_status.md)
+
+## Migrating from older versions
+
+If upgrading from a version that used `@continuum-boot`:
+
+1. Remove `@continuum-boot` and `@continuum-boot-options` from `.tmux.conf`.
+2. Run `:continuum-boot-enable` inside tmux to install the new service.
+3. Delete the old macOS plist if present:
+   `rm ~/Library/LaunchAgents/Tmux.Start.plist`
+4. Move the old halt file if used:
+   `mv ~/tmux_no_auto_restore "${XDG_CONFIG_HOME:-$HOME/.config}/tmux/no-auto-restore"`
+
+Removed options (safe to delete from `.tmux.conf`):
+- `@continuum-boot`, `@continuum-boot-options`
+- `@continuum-restore-max-delay`
+- `@continuum-systemd-start-cmd`
+- `@continuum-status-on-wrap-style`, `@continuum-status-off-wrap-style`
+
+## Contributing
+
+Bug reports and contributions are welcome. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
 [MIT](LICENSE.md)

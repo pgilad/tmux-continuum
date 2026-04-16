@@ -2,9 +2,9 @@
 
 > Will a previous save be overwritten immediately after I start tmux?
 
-No, first automatic save starts 15 minutes after tmux is started. If automatic
-restore is not enabled, that gives you enough time to manually restore from a
-previous save.
+No, the first automatic save happens after the configured interval (15 minutes
+by default). If automatic restore is not enabled, that gives you enough time to
+manually restore from a previous save.
 
 > I want to make a restore to a previous point in time, but it seems that save
 is now overwritten?
@@ -27,19 +27,35 @@ and then source `tmux.conf` by executing this command in the shell
 
 > How do I stop automatic saving?
 
-Just set the save interval to `0`. Put this in `.tmux.conf`
+Set the save interval to `0`. Put this in `.tmux.conf`:
 
     set -g @continuum-save-interval '0'
 
-and then source `tmux.conf` by executing this command in the shell
-`$ tmux source-file ~/.tmux.conf`.
+The change takes effect within 60 seconds — no need to re-source your config.
+To re-enable, set the interval back to a positive number.
 
 > I had automatic restore turned on, how do I disable it now?
 
-Just remove `set -g @continuum-restore 'on'` from `tmux.conf`.
+Remove `set -g @continuum-restore 'on'` from `tmux.conf`.
 
-To be absolutely sure automatic restore doesn't happen, create a
-`tmux_no_auto_restore` file in your home directory (command:
-`$ touch ~/tmux_no_auto_restore`). Automatic restore won't happen if this file
-exists.
+To be absolutely sure automatic restore doesn't happen, create a halt file:
 
+    mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tmux"
+    touch "${XDG_CONFIG_HOME:-$HOME/.config}/tmux/no-auto-restore"
+
+Automatic restore won't happen if this file exists. You can override the path
+with the `TMUX_CONTINUUM_NO_RESTORE` environment variable.
+
+> How do I check if the save daemon is running?
+
+Check the PID stored in the tmux option:
+
+    tmux show-option -gv @_continuum_pid
+
+Verify the process is alive:
+
+    kill -0 $(tmux show-option -gv @_continuum_pid) && echo "running" || echo "dead"
+
+The `#{continuum_status}` interpolation also makes this visible — if the "Xm
+ago" number keeps growing beyond the save interval, the daemon has likely
+stopped. Re-sourcing `.tmux.conf` will restart it.

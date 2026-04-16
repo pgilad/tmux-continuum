@@ -1,47 +1,53 @@
-# Automatic Tmux start
+# Automatic tmux start
 
-Tmux is automatically started after the computer/server is turned on.
+Tmux can be started automatically when the computer boots or the user logs in.
 
-### OS X
+Unlike previous versions of this plugin, automatic start is **not** configured
+via `.tmux.conf` options. Instead, you run an explicit tmux command to install
+(or remove) the system-level configuration.
 
-To enable this feature:
-- put `set -g @continuum-boot 'on'` in `.tmux.conf`
-- reload tmux config with this shell command: `$ tmux source-file ~/.tmux.conf`
+### Enabling
 
-Next time the computer is started:
-- `Terminal.app` window will open and resize to maximum size
-- `tmux` command will be executed in the terminal window
-- if "auto restore" feature is enabled, tmux will start restoring previous env
+From inside tmux, run:
 
-Config options:
-- `set -g @continuum-boot-options 'fullscreen'` - terminal window
-  will go fullscreen
-- `set -g @continuum-boot-options 'iterm'` - start [iTerm](https://www.iterm2.com) instead
-  of `Terminal.app`
-- `set -g @continuum-boot-options 'iterm,fullscreen'` - start `iTerm`
-  in fullscreen
-- `set -g @continuum-boot-options 'kitty'` - start [kitty](https://sw.kovidgoyal.net/kitty) instead
-  of `Terminal.app`
-- `set -g @continuum-boot-options 'kitty,fullscreen'` - start `kitty`
-  in fullscreen
-- `set -g @continuum-boot-options 'alacritty'` - start [alacritty](https://github.com/alacritty/alacritty) instead of `Terminal.app`
-- `set -g @continuum-boot-options 'alacritty,fullscreen'` - start `alacritty`
-  in fullscreen
+    :continuum-boot-enable
 
-Note: The first time you reboot your machine and activate this feature you may be prompted about a script requiring
-access to a system program (i.e. - System Events). If this happens tmux will not start automatically and you will need
-to go to `System Preferences -> Security & Privacy -> Accessability` and add the script to the list of apps that are
-allowed to control your computer.
+This installs a platform-appropriate service:
+- **macOS**: a LaunchAgent at `~/Library/LaunchAgents/com.tmux.server.plist`
+- **Linux**: a systemd user unit at `${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/tmux.service`
 
-### Linux
+The service runs `tmux new-session -d` on login, which starts a headless tmux
+server. It does **not** open any terminal window.
 
-Help with this would be greatly appreciated. Please get in touch.
+To attach to the server when you open a terminal, add this to your
+`.bashrc`/`.zshrc`:
 
-#### Systemd
+```sh
+[[ -z "$TMUX" ]] && tmux attach 2>/dev/null
+```
 
-##### this will only start the tmux server, it will *not* start any terminal emulator
+### Disabling
 
-To enable automatic start with systemd:
-- Put `set -g @continuum-boot 'on'` in `.tmux.conf`
-- reload tmux config with this shell command: `$ tmux source-file ~/.tmux.conf`
-- see [systemd](/docs/systemd_details.md) for more details about how this is implemented
+From inside tmux, run:
+
+    :continuum-boot-disable
+
+This removes the LaunchAgent or systemd unit.
+
+### Design notes
+
+The LaunchAgent/systemd unit does **not** reference the plugin directory. It is a
+standalone service that starts tmux. This means:
+
+- It continues to work even if the plugin is uninstalled.
+- No terminal emulator selection or AppleScript is involved.
+- No accessibility permissions are required on macOS.
+- You may choose to keep it after removing tmux-continuum.
+
+### Migrating from `@continuum-boot`
+
+If you previously used `set -g @continuum-boot 'on'`:
+
+1. Remove the option (and `@continuum-boot-options`) from `.tmux.conf`.
+2. Run `:continuum-boot-enable` inside tmux.
+3. Remove the old macOS plist: `rm ~/Library/LaunchAgents/Tmux.Start.plist`

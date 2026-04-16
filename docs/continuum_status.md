@@ -1,17 +1,19 @@
 ## Continuum status in tmux status line
 
-There is an option to display current status of tmux continuum in tmux status
-line. This is done via `#{continuum_status}` interpolation and it works with
-both `status-right` and `status-left` tmux native options.
+You can display the current status of tmux-continuum in the tmux status line
+using the `#{continuum_status}` interpolation. It works with both `status-right`
+and `status-left`.
 
 Example usage:
 
-    set -g status-right 'Continuum status: #{continuum_status}'
+    set -g status-right 'Continuum: #{continuum_status}'
 
-When running, `#{continuum_status}` will show continuum save interval:
+The interpolation shows:
 
-    Continuum status: 15
+- **`3m ago`** — last save was 3 minutes ago (confirms saving is working)
+- **`15m`** — the configured interval, shown before the first save has completed
+- **`off`** — saving is disabled (interval is `0`)
 
-or if continuous saving is disabled:
+If you want to style the output, wrap it with tmux style tags directly:
 
-    Continuum status: off
+    set -g status-right '#[fg=green]#{continuum_status}#[default]'
