@@ -5,6 +5,14 @@ Code contributions are welcome!
 If you wanna contribute a bigger feature, please open a github issue so we can
 discuss it together first.
 
+### Testing
+
+Run the shell test suite with:
+
+```sh
+./run_tests
+```
+
 ### Reporting a bug
 
 If you find a bug please report it in the issues. When reporting a bug please
