@@ -38,9 +38,10 @@ plugin manager config.
 manager written in Rust. Add to your `tpm.yaml`:
 
 ```yaml
+version: 1
 plugins:
-  - name: tmux-plugins/tmux-resurrect
-  - name: tmux-plugins/tmux-continuum
+  - source: tmux-plugins/tmux-resurrect
+  - source: tmux-plugins/tmux-continuum
 ```
 
 Run `tpm install` and reload your config. Auto-save starts immediately.
@@ -184,7 +185,7 @@ Bug reports and contributions are welcome. See
 
 ## License
 
-[MIT](LICENSE.md)
+[MIT](LICENSE)
 
 ## Credits
 
