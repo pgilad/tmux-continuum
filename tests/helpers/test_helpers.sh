@@ -10,6 +10,20 @@ fail() {
     exit 1
 }
 
+test_shell_quote() {
+    local value="$1" i char
+    printf "'"
+    for ((i = 0; i < ${#value}; i++)); do
+        char="${value:i:1}"
+        if [[ "$char" == "'" ]]; then
+            printf '%s' "'\\''"
+        else
+            printf '%s' "$char"
+        fi
+    done
+    printf "'"
+}
+
 require_command() {
     local cmd="$1"
     command -v "$cmd" >/dev/null 2>&1 || fail "missing required command: $cmd"
@@ -131,7 +145,7 @@ configure_continuum() {
 }
 
 run_continuum() {
-    tmux run-shell "$TEST_ROOT_DIR/continuum.tmux"
+    tmux run-shell "$(test_shell_quote "$TEST_ROOT_DIR/continuum.tmux")"
 }
 
 continuum_pid() {

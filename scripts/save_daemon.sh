@@ -78,7 +78,13 @@ while true; do
     sleep_until_save_due || continue
 
     save_script="$(tmux show-option -gqv @_continuum_save_script 2>/dev/null)"
-    if [[ -n "$save_script" && -x "$save_script" ]]; then
+    if [[ -z "$save_script" ]]; then
+        tmux display-message "continuum: ERROR - tmux-resurrect save script path is unset. Reload tmux config." 2>/dev/null || true
+    elif [[ ! -f "$save_script" ]]; then
+        tmux display-message "continuum: ERROR - tmux-resurrect save script does not exist: $save_script" 2>/dev/null || true
+    elif [[ ! -x "$save_script" ]]; then
+        tmux display-message "continuum: ERROR - tmux-resurrect save script is not executable: $save_script" 2>/dev/null || true
+    else
         "$save_script" quiet &>/dev/null &
         tmux set-option -gq @continuum-last-save "$(date +%s)"
     fi
