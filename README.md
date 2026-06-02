@@ -54,24 +54,44 @@ plugin manager config.
 ### With [tpm-rs](https://github.com/pgilad/tpm-rs) (recommended)
 
 [tpm-rs](https://github.com/pgilad/tpm-rs) is a modern, fast tmux plugin
-manager written in Rust. Add to your `tpm.yaml`:
+manager written in Rust. Create `${XDG_CONFIG_HOME:-$HOME/.config}/tpm/tpm.yaml`:
 
 ```yaml
 version: 1
 plugins:
-  - source: tmux-plugins/tmux-resurrect
-  - source: tmux-plugins/tmux-continuum
+  - source: pgilad/tmux-resurrect
+  - source: pgilad/tmux-continuum
 ```
 
-Run `tpm install` and reload your config. Auto-save starts immediately.
+Then load plugins from your `.tmux.conf`:
+
+```tmux
+run-shell "tpm load"
+```
+
+Install and reload your config:
+
+```sh
+tpm install
+tmux source-file ~/.tmux.conf
+```
+
+You can also let `tpm` update `tpm.yaml` for you:
+
+```sh
+tpm add pgilad/tmux-resurrect
+tpm add pgilad/tmux-continuum
+```
+
+Auto-save starts as soon as the plugin is loaded.
 
 ### With [TPM](https://github.com/tmux-plugins/tpm) (legacy)
 
 Add to `.tmux.conf`:
 
 ```tmux
-set -g @plugin 'tmux-plugins/tmux-resurrect'
-set -g @plugin 'tmux-plugins/tmux-continuum'
+set -g @plugin 'pgilad/tmux-resurrect'
+set -g @plugin 'pgilad/tmux-continuum'
 ```
 
 Press `prefix + I` to install. The plugin starts working in the background
@@ -80,7 +100,7 @@ automatically.
 ### Manual
 
 ```sh
-git clone https://github.com/tmux-plugins/tmux-continuum ~/path/to/continuum
+git clone https://github.com/pgilad/tmux-continuum ~/path/to/continuum
 ```
 
 Add to `.tmux.conf`:
