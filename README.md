@@ -85,18 +85,6 @@ tpm add pgilad/tmux-continuum
 
 Auto-save starts as soon as the plugin is loaded.
 
-### With [TPM](https://github.com/tmux-plugins/tpm) (legacy)
-
-Add to `.tmux.conf`:
-
-```tmux
-set -g @plugin 'pgilad/tmux-resurrect'
-set -g @plugin 'pgilad/tmux-continuum'
-```
-
-Press `prefix + I` to install. The plugin starts working in the background
-automatically.
-
 ### Manual
 
 ```sh
