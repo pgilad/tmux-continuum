@@ -54,33 +54,23 @@ plugin manager config.
 ### With [tpm-rs](https://github.com/pgilad/tpm-rs) (recommended)
 
 [tpm-rs](https://github.com/pgilad/tpm-rs) is a modern, fast tmux plugin
-manager written in Rust. Create `${XDG_CONFIG_HOME:-$HOME/.config}/tpm/tpm.yaml`:
+manager written in Rust. Add the plugins:
 
-```yaml
-version: 1
-plugins:
-  - source: pgilad/tmux-resurrect
-  - source: pgilad/tmux-continuum
+```sh
+tpm add pgilad/tmux-resurrect
+tpm add pgilad/tmux-continuum
 ```
 
-Then load plugins from your `.tmux.conf`:
+Make sure your `.tmux.conf` loads tpm-rs:
 
 ```tmux
 run-shell "tpm load"
 ```
 
-Install and reload your config:
+Reload your config:
 
 ```sh
-tpm install
 tmux source-file ~/.tmux.conf
-```
-
-You can also let `tpm` update `tpm.yaml` for you:
-
-```sh
-tpm add pgilad/tmux-resurrect
-tpm add pgilad/tmux-continuum
 ```
 
 Auto-save starts as soon as the plugin is loaded.
