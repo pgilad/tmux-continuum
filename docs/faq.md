@@ -9,11 +9,11 @@ manually restore from a previous save.
 > I want to make a restore to a previous point in time, but it seems that save
 is now overwritten?
 
-Read how to [restore a previously saved environment](https://github.com/tmux-plugins/tmux-resurrect/blob/master/docs/restoring_previously_saved_environment.md)
+Read how to [restore a previously saved environment](https://github.com/pgilad/tmux-resurrect/blob/master/docs/restoring_previously_saved_environment.md)
 
 > Will this plugin fill my hard disk?
 
-Most likely no. A regular save file is in the range of 5Kb. And `tmux-resurrect` already has a `remove_old_backups()` routine that will ["remove resurrect files older than 30 days, but keep at least 5 copies of backup."](https://github.com/tmux-plugins/tmux-resurrect/blob/da1a7558024b8552f7262b39ed22e3d679304f99/scripts/save.sh#L271-L277)
+Most likely no. A regular save file is in the range of 5Kb. And `tmux-resurrect` already has a `remove_old_backups()` routine that will ["remove resurrect files older than 30 days, but keep at least 5 copies of backup."](https://github.com/pgilad/tmux-resurrect/blob/da1a7558024b8552f7262b39ed22e3d679304f99/scripts/save.sh#L271-L277)
 
 > How do I change the save interval to i.e. 1 hour?
 

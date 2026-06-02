@@ -33,7 +33,7 @@ but with simpler internals, safer restore behavior, and cleaner boot support.
 
 Continuum runs a single background daemon (via `tmux run-shell -b`) that
 sleeps for the configured interval and then calls
-[tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect)'s save
+[tmux-resurrect](https://github.com/pgilad/tmux-resurrect)'s save
 script. No status-line hacks, no locks, no periodic forks.
 
 On a fresh server start, continuum optionally triggers resurrect's restore
@@ -44,7 +44,7 @@ config will never re-trigger a restore.
 
 - `tmux 3.2` or higher
 - `bash`
-- [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect)
+- [tmux-resurrect](https://github.com/pgilad/tmux-resurrect)
 
 **tmux-resurrect must load before tmux-continuum.** List it first in your
 plugin manager config.
