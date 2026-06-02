@@ -10,6 +10,25 @@ No matter the crash or restart, tmux will be there how you left it.
 
 Works on Linux and macOS. Requires **tmux 3.2+** and **bash**.
 
+## Why this fork?
+
+This fork keeps the familiar tmux-continuum workflow while modernizing the
+implementation:
+
+- Uses a single long-running background daemon instead of status-line hooks,
+  locks, and repeated process spawning
+- Restores exactly once per tmux server lifetime, so re-sourcing your config
+  never unexpectedly restores over your current session
+- Provides explicit boot management commands (`:continuum-boot-enable` and
+  `:continuum-boot-disable`) using standalone launchd/systemd user services
+- Follows XDG paths for the auto-restore halt file
+- Drops legacy options and behavior that made the original harder to reason
+  about
+
+Use this fork if you want the same auto-save/auto-restore idea as the original
+[tmux-plugins/tmux-continuum](https://github.com/tmux-plugins/tmux-continuum),
+but with simpler internals, safer restore behavior, and cleaner boot support.
+
 ## How it works
 
 Continuum runs a single background daemon (via `tmux run-shell -b`) that
